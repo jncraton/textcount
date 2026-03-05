@@ -1,0 +1,18 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install Playwright Browsers
+        run: uv run --with pytest-playwright==0.7.2 python -m playwright install chromium
+      - name: Run Tests
+        run: make test
