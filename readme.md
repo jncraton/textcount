@@ -7,7 +7,7 @@
 
 A simple browser-based text counter with tokenization support.
 
-[https://jncraton.github.io/textcount](https://jncraton.github.io/textcount)
+[Demo](https://jncraton.github.io/textcount)
 
 ## Development
 
