@@ -89,7 +89,6 @@
   </head>
   <body>
     <h1>Text Count</h1>
-    <p class="muted">Counts update as you type. Tokenization uses GPT-4o (o200k_base) tokenizer.</p>
 
     <textarea id="input" placeholder="Paste or type text here..."></textarea>
 
@@ -116,17 +115,13 @@
         <div id="lines">0</div>
       </div>
       <div class="count">
-        <div class="small muted">Tokens (o200k_base)</div>
+        <div class="small muted">Tokens</div>
         <div id="tokens">0</div>
       </div>
     </div>
 
     <div class="status" id="status">Loading tokenizer…</div>
     <div class="tokens-display" id="tokens-display"></div>
-
-    <footer>
-      Uses transformers.js via CDN. Token counts are model/tokenizer specific and may vary.
-    </footer>
 
     <script type="module">
       import {
@@ -178,7 +173,7 @@
         if (debounceTimer) clearTimeout(debounceTimer)
         debounceTimer = setTimeout(async () => {
           try {
-            const { input_ids } = await tokenizer(text)
+            const { input_ids } = await tokenizer(text, { add_special_tokens: true })
             tokensEl.textContent = input_ids.size
 
             // Attempt to show individual tokens if possible
