@@ -1,5 +1,3 @@
-SHELL := /bin/bash
-
 .PHONY: all test serve lint clean
 
 all: test
