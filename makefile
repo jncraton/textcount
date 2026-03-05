@@ -16,4 +16,4 @@ format:
 	npx prettier@3.6.2 --write .
 
 clean:
-	rm -f .pytest_cache
+	rm -rf .pytest_cache __pycache__
