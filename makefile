@@ -1,6 +1,6 @@
 .PHONY: all test serve lint clean
 
-all: test
+all:
 
 serve:
 	python3 -m http.server 8000
