@@ -28,19 +28,14 @@ def test_multiple_lines(root):
     
     expect(root.locator("#lines")).to_have_text("3")
 
-def test_tokenizer_loading(root):
-    # This might take a moment as it fetches from CDN in the browser
-    # We wait for the status to change from "Loading tokenizer..."
-    expect(root.locator("#status")).not_to_have_text("Loading tokenizer…", timeout=30000)
+def test_token_count_value(root):
+    # Wait for tokenizer to load
+    # We use a loose match as the status might contain extra info
+    expect(root.locator("#status")).to_have_text(re.compile("Tokenizer loaded"), timeout=60000)
     
     textarea = root.locator("#input")
-    textarea.fill("test")
+    # "Hello" is usually 1 token
+    textarea.fill("Hello")
     
-    # Wait for debounce and token count to update
-    # Gemma tokenizer usually gives 1 token for "test" (plus maybe BOS, but script uses add_special_tokens: false)
-    # We just check it's a number and not "loading…" or "err"
-    expect(root.locator("#tokens")).not_to_have_text("loading…", timeout=30000)
-    tokens_text = root.locator("#tokens").inner_text()
-    # On some test environments, the tokenizer might fail to load (e.g. CORS or network issues)
-    # We accept 'disabled' if the environment is restricted
-    assert tokens_text.isdigit() or tokens_text in ["0", "disabled"]
+    # Wait for debounce and check
+    expect(root.locator("#tokens")).to_have_text("1", timeout=10000)
