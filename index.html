@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Text Count — Char / Word / Line / Gemma3-270m Tokens</title>
+    <style>
+      :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111;background:#fff}
+      body{max-width:900px;margin:32px auto;padding:16px}
+      h1{font-size:1.25rem;margin:0 0 12px}
+      textarea{width:100%;height:260px;padding:12px;font-size:1rem;line-height:1.45;box-sizing:border-box}
+      .counts{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+      .count{background:#f7f7f8;padding:10px;border-radius:8px;min-width:140px}
+      .muted{color:#666;font-size:0.9rem}
+      .small{font-size:0.9rem}
+      .status{margin-top:8px;color:#444}
+      footer{margin-top:20px;color:#666;font-size:0.85rem}
+    </style>
+  </head>
+  <body>
+    <h1>Text Count</h1>
+    <p class="muted">Counts update as you type. Tokenization uses transformers.js and the google/gemma-3-270m-it tokenizer.</p>
+
+    <textarea id="input" placeholder="Paste or type text here..."></textarea>
+
+    <div class="counts" aria-live="polite">
+      <div class="count">
+        <div class="small muted">Characters</div>
+        <div id="chars">0</div>
+      </div>
+      <div class="count">
+        <div class="small muted">Words</div>
+        <div id="words">0</div>
+      </div>
+      <div class="count">
+        <div class="small muted">Lines</div>
+        <div id="lines">0</div>
+      </div>
+      <div class="count">
+        <div class="small muted">Gemma3-270m tokens</div>
+        <div id="tokens">loading…</div>
+      </div>
+    </div>
+
+    <div class="status" id="status">Loading tokenizer…</div>
+
+    <footer>Uses transformers.js via CDN. Token counts are model/tokenizer specific and may vary.</footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js"></script>
+    <script>
+      (function () {
+        const input = document.getElementById('input');
+        const charsEl = document.getElementById('chars');
+        const wordsEl = document.getElementById('words');
+        const linesEl = document.getElementById('lines');
+        const tokensEl = document.getElementById('tokens');
+        const statusEl = document.getElementById('status');
+
+        let tokenizer = null;
+        let tokenizerReady = false;
+        let lastTextForTokens = '';
+        let debounceTimer = null;
+
+        function countChars(text) {
+          return text.length;
+        }
+
+        function countWords(text) {
+          // split on whitespace, filter empties
+          return text.trim().length === 0
+            ? 0
+            : text.trim().split(/\s+/).filter(Boolean).length;
+        }
+
+        function countLines(text) {
+          if (text.length === 0) return 0;
+          return text.split('\n').length;
+        }
+
+        async function countTokens(text) {
+          if (!tokenizerReady) return 'N/A';
+          try {
+            // use tokenizer.encode to get token ids
+            const ids = await tokenizer.encode(text, { add_special_tokens: false, return_tensor: false });
+            if (Array.isArray(ids)) return ids.length;
+            // some tokenizers return an object; try input_ids
+            if (ids && ids.input_ids) return ids.input_ids.length || ids.input_ids[0]?.length || 0;
+            return 0;
+          } catch (err) {
+            console.error('tokenize error', err);
+            return 'err';
+          }
+        }
+
+        async function updateCounts() {
+          const text = input.value;
+          charsEl.textContent = countChars(text);
+          wordsEl.textContent = countWords(text);
+          linesEl.textContent = countLines(text);
+
+          // debounce token counting to avoid flooding network
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(async () => {
+            if (text === lastTextForTokens && tokenizerReady) return;
+            tokensEl.textContent = '…';
+            const tcount = await countTokens(text);
+            tokensEl.textContent = String(tcount);
+            lastTextForTokens = text;
+          }, 250);
+        }
+
+        input.addEventListener('input', updateCounts);
+
+        // Initialize tokenizer
+        async function initTokenizer() {
+          try {
+            statusEl.textContent = 'Loading tokenizer from Hugging Face: google/gemma-3-270m-it';
+            // prefer PreTrainedTokenizer.from_pretrained if available
+            if (window.transformers && window.transformers.PreTrainedTokenizer && window.transformers.PreTrainedTokenizer.from_pretrained) {
+              tokenizer = await window.transformers.PreTrainedTokenizer.from_pretrained('google/gemma-3-270m-it');
+            } else if (window.transformers && window.transformers.AutoTokenizer && window.transformers.AutoTokenizer.from_pretrained) {
+              tokenizer = await window.transformers.AutoTokenizer.from_pretrained('google/gemma-3-270m-it');
+            } else if (window.transformers && window.transformers.tokenizers && window.transformers.tokenizers.loadTokenizer) {
+              const loaded = await window.transformers.tokenizers.loadTokenizer('google/gemma-3-270m-it');
+              tokenizer = loaded[0] || loaded;
+            } else {
+              throw new Error('transformers.js tokenizer API not found on window.transformers');
+            }
+
+            tokenizerReady = true;
+            statusEl.textContent = 'Tokenizer loaded (google/gemma-3-270m-it). Counting tokens with model tokenizer.';
+            tokensEl.textContent = '0';
+            updateCounts();
+          } catch (err) {
+            console.error(err);
+            statusEl.textContent = 'Tokenizer failed to load. Token count unavailable.';
+            tokensEl.textContent = 'unavailable';
+          }
+        }
+
+        // Wait a tick for the transformers script to register
+        if (window.transformers) {
+          initTokenizer();
+        } else {
+          // in case the script hasn't parsed yet: poll briefly
+          let tries = 0;
+          const waiter = setInterval(() => {
+            tries++;
+            if (window.transformers) {
+              clearInterval(waiter);
+              initTokenizer();
+            } else if (tries > 50) {
+              clearInterval(waiter);
+              statusEl.textContent = 'transformers.js did not load; token counting disabled.';
+              tokensEl.textContent = 'disabled';
+            }
+          }, 100);
+        }
+
+        // initial counts
+        updateCounts();
+      })();
+    </script>
+  </body>
+</html>
