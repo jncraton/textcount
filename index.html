@@ -57,6 +57,29 @@
         margin-top: 8px;
         color: #444;
       }
+      .tokens-display {
+        margin-top: 16px;
+        padding: 12px;
+        background: #fdfdfd;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 0.9rem;
+        word-break: break-all;
+        white-space: pre-wrap;
+      }
+      .token {
+        display: inline-block;
+        padding: 2px 4px;
+        margin: 2px;
+        background: #eef2ff;
+        border: 1px solid #c7d2fe;
+        border-radius: 4px;
+      }
+      .token:nth-child(even) {
+        background: #f5f3ff;
+        border-color: #ddd6fe;
+      }
       footer {
         margin-top: 20px;
         color: #666;
@@ -90,6 +113,7 @@
     </div>
 
     <div class="status" id="status">Loading tokenizer…</div>
+    <div class="tokens-display" id="tokens-display"></div>
 
     <footer>
       Uses transformers.js via CDN. Token counts are model/tokenizer specific and may vary.
@@ -111,6 +135,7 @@
       const linesEl = document.getElementById('lines')
       const tokensEl = document.getElementById('tokens')
       const statusEl = document.getElementById('status')
+      const displayEl = document.getElementById('tokens-display')
 
       let tokenizer = null
       let debounceTimer = null
@@ -141,6 +166,28 @@
           try {
             const { input_ids } = await tokenizer(text)
             tokensEl.textContent = input_ids.size
+
+            const tokens = await tokenizer.decode(input_ids, {
+              skip_special_tokens: false
+            })
+
+            // Attempt to show individual tokens if possible
+            // Note: transformers.js decode returns a single string.
+            // For visualization we will try to decode token by token.
+            const tokenList = []
+            for (let i = 0; i < input_ids.size; i++) {
+              const id = input_ids.data ? input_ids.data[i] : input_ids[i]
+              const t = await tokenizer.decode([id])
+              tokenList.push(t)
+            }
+
+            displayEl.innerHTML = ''
+            tokenList.forEach((t) => {
+              const span = document.createElement('span')
+              span.className = 'token'
+              span.textContent = t.replace(/\n/g, '\\n').replace(/\t/g, '\\t')
+              displayEl.appendChild(span)
+            })
           } catch (err) {
             console.error('Tokenization error:', err)
             tokensEl.textContent = 'err'
