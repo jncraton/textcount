@@ -4,115 +4,165 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Text Count — Char / Word / Line / Gemma 3 Tokens</title>
-  <style>
-    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111;background:#fff}
-    body{max-width:900px;margin:32px auto;padding:16px}
-    h1{font-size:1.25rem;margin:0 0 12px}
-    textarea{width:100%;height:260px;padding:12px;font-size:1rem;line-height:1.45;box-sizing:border-box}
-    .counts{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
-    .count{background:#f7f7f8;padding:10px;border-radius:8px;min-width:140px}
-    .muted{color:#666;font-size:0.9rem}
-    .small{font-size:0.9rem}
-    .status{margin-top:8px;color:#444}
-    footer{margin-top:20px;color:#666;font-size:0.85rem}
-  </style>
-</head>
-<body>
-  <h1>Text Count</h1>
-  <p class="muted">Counts update as you type. Tokenization uses GPT-4o (o200k_base) tokenizer.</p>
-
-  <textarea id="input" placeholder="Paste or type text here..."></textarea>
-
-  <div class="counts" aria-live="polite">
-    <div class="count">
-      <div class="small muted">Characters</div>
-      <div id="chars">0</div>
-    </div>
-    <div class="count">
-      <div class="small muted">Words</div>
-      <div id="words">0</div>
-    </div>
-    <div class="count">
-      <div class="small muted">Lines</div>
-      <div id="lines">0</div>
-    </div>
-    <div class="count">
-      <div class="small muted">Tokens (o200k_base)</div>
-      <div id="tokens">0</div>
-    </div>
-  </div>
-
-  <div class="status" id="status">Loading tokenizer…</div>
-
-  <footer>Uses transformers.js via CDN. Token counts are model/tokenizer specific and may vary.</footer>
-
-  <script type="module">
-    import { AutoTokenizer, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3';
-
-    // Disable local models to force fetching from Hub
-    env.allowLocalModels = false;
-    env.useBrowserCache = true;
-
-    const input = document.getElementById('input');
-    const charsEl = document.getElementById('chars');
-    const wordsEl = document.getElementById('words');
-    const linesEl = document.getElementById('lines');
-    const tokensEl = document.getElementById('tokens');
-    const statusEl = document.getElementById('status');
-
-    let tokenizer = null;
-    let debounceTimer = null;
-
-    function countChars(text) {
-      return text.length;
-    }
-
-    function countWords(text) {
-      return text.trim().length === 0
-        ? 0
-        : text.trim().split(/\s+/).filter(Boolean).length;
-    }
-
-    function countLines(text) {
-      if (text.length === 0) return 0;
-      return text.split('\n').length;
-    }
-
-    async function updateCounts() {
-      const text = input.value;
-      charsEl.textContent = countChars(text);
-      wordsEl.textContent = countWords(text);
-      linesEl.textContent = countLines(text);
-
-      if (!tokenizer) return;
-
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(async () => {
-        try {
-          const { input_ids } = await tokenizer(text);
-          tokensEl.textContent = input_ids.size;
-        } catch (err) {
-          console.error('Tokenization error:', err);
-          tokensEl.textContent = 'err';
-        }
-      }, 100);
-    }
-
-    input.addEventListener('input', updateCounts);
-
-    async function init() {
-      try {
-        statusEl.textContent = 'Loading o200k_base tokenizer…';
-        tokenizer = await AutoTokenizer.from_pretrained('Xenova/gpt-4o');
-        statusEl.textContent = 'Tokenizer loaded (o200k_base).';
-        updateCounts();
-      } catch (err) {
-        console.error('Initialization error:', err);
-        statusEl.textContent = 'Tokenizer failed to load.';
+    <style>
+      :root {
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        color: #111;
+        background: #fff;
       }
-    }
+      body {
+        max-width: 900px;
+        margin: 32px auto;
+        padding: 16px;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 0 0 12px;
+      }
+      textarea {
+        width: 100%;
+        height: 260px;
+        padding: 12px;
+        font-size: 1rem;
+        line-height: 1.45;
+        box-sizing: border-box;
+      }
+      .counts {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .count {
+        background: #f7f7f8;
+        padding: 10px;
+        border-radius: 8px;
+        min-width: 140px;
+      }
+      .muted {
+        color: #666;
+        font-size: 0.9rem;
+      }
+      .small {
+        font-size: 0.9rem;
+      }
+      .status {
+        margin-top: 8px;
+        color: #444;
+      }
+      footer {
+        margin-top: 20px;
+        color: #666;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Text Count</h1>
+    <p class="muted">Counts update as you type. Tokenization uses GPT-4o (o200k_base) tokenizer.</p>
 
-    init();
-  </script>
-</body>
+    <textarea id="input" placeholder="Paste or type text here..."></textarea>
+
+    <div class="counts" aria-live="polite">
+      <div class="count">
+        <div class="small muted">Characters</div>
+        <div id="chars">0</div>
+      </div>
+      <div class="count">
+        <div class="small muted">Words</div>
+        <div id="words">0</div>
+      </div>
+      <div class="count">
+        <div class="small muted">Lines</div>
+        <div id="lines">0</div>
+      </div>
+      <div class="count">
+        <div class="small muted">Tokens (o200k_base)</div>
+        <div id="tokens">0</div>
+      </div>
+    </div>
+
+    <div class="status" id="status">Loading tokenizer…</div>
+
+    <footer>
+      Uses transformers.js via CDN. Token counts are model/tokenizer specific and may vary.
+    </footer>
+
+    <script type="module">
+      import {
+        AutoTokenizer,
+        env
+      } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3'
+
+      // Disable local models to force fetching from Hub
+      env.allowLocalModels = false
+      env.useBrowserCache = true
+
+      const input = document.getElementById('input')
+      const charsEl = document.getElementById('chars')
+      const wordsEl = document.getElementById('words')
+      const linesEl = document.getElementById('lines')
+      const tokensEl = document.getElementById('tokens')
+      const statusEl = document.getElementById('status')
+
+      let tokenizer = null
+      let debounceTimer = null
+
+      function countChars(text) {
+        return text.length
+      }
+
+      function countWords(text) {
+        return text.trim().length === 0 ? 0 : text.trim().split(/\s+/).filter(Boolean).length
+      }
+
+      function countLines(text) {
+        if (text.length === 0) return 0
+        return text.split('\n').length
+      }
+
+      async function updateCounts() {
+        const text = input.value
+        charsEl.textContent = countChars(text)
+        wordsEl.textContent = countWords(text)
+        linesEl.textContent = countLines(text)
+
+        if (!tokenizer) return
+
+        if (debounceTimer) clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(async () => {
+          try {
+            const { input_ids } = await tokenizer(text)
+            tokensEl.textContent = input_ids.size
+          } catch (err) {
+            console.error('Tokenization error:', err)
+            tokensEl.textContent = 'err'
+          }
+        }, 100)
+      }
+
+      input.addEventListener('input', updateCounts)
+
+      async function init() {
+        try {
+          statusEl.textContent = 'Loading o200k_base tokenizer…'
+          tokenizer = await AutoTokenizer.from_pretrained('Xenova/gpt-4o')
+          statusEl.textContent = 'Tokenizer loaded (o200k_base).'
+          updateCounts()
+        } catch (err) {
+          console.error('Initialization error:', err)
+          statusEl.textContent = 'Tokenizer failed to load.'
+        }
+      }
+
+      init()
+    </script>
+  </body>
 </html>
