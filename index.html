@@ -95,6 +95,14 @@
 
     <div class="counts" aria-live="polite">
       <div class="count">
+        <label for="model-select" class="small muted">Model</label>
+        <select id="model-select" style="display: block; width: 100%; margin-top: 4px">
+          <option value="Xenova/gpt-4o">GPT-4o (o200k_base)</option>
+          <option value="google/gemma-3-4b-it">Gemma 3</option>
+          <option value="Qwen/Qwen2.5-0.5B-Instruct">Qwen 2.5</option>
+        </select>
+      </div>
+      <div class="count">
         <div class="small muted">Characters</div>
         <div id="chars">0</div>
       </div>
@@ -136,6 +144,7 @@
       const tokensEl = document.getElementById('tokens')
       const statusEl = document.getElementById('status')
       const displayEl = document.getElementById('tokens-display')
+      const modelSelect = document.getElementById('model-select')
 
       let tokenizer = null
       let debounceTimer = null
@@ -159,7 +168,11 @@
         wordsEl.textContent = countWords(text)
         linesEl.textContent = countLines(text)
 
-        if (!tokenizer) return
+        if (!tokenizer) {
+          tokensEl.textContent = '…'
+          displayEl.innerHTML = ''
+          return
+        }
 
         if (debounceTimer) clearTimeout(debounceTimer)
         debounceTimer = setTimeout(async () => {
@@ -167,13 +180,7 @@
             const { input_ids } = await tokenizer(text)
             tokensEl.textContent = input_ids.size
 
-            const tokens = await tokenizer.decode(input_ids, {
-              skip_special_tokens: false
-            })
-
             // Attempt to show individual tokens if possible
-            // Note: transformers.js decode returns a single string.
-            // For visualization we will try to decode token by token.
             const tokenList = []
             for (let i = 0; i < input_ids.size; i++) {
               const id = input_ids.data ? input_ids.data[i] : input_ids[i]
@@ -197,16 +204,25 @@
 
       input.addEventListener('input', updateCounts)
 
-      async function init() {
+      async function loadTokenizer(modelId) {
         try {
-          statusEl.textContent = 'Loading o200k_base tokenizer…'
-          tokenizer = await AutoTokenizer.from_pretrained('Xenova/gpt-4o')
-          statusEl.textContent = 'Tokenizer loaded (o200k_base).'
+          tokenizer = null
+          statusEl.textContent = `Loading ${modelId} tokenizer…`
+          tokenizer = await AutoTokenizer.from_pretrained(modelId)
+          statusEl.textContent = `Tokenizer loaded: ${modelId}`
           updateCounts()
         } catch (err) {
           console.error('Initialization error:', err)
-          statusEl.textContent = 'Tokenizer failed to load.'
+          statusEl.textContent = `Failed to load ${modelId} tokenizer.`
         }
+      }
+
+      modelSelect.addEventListener('change', (e) => {
+        loadTokenizer(e.target.value)
+      })
+
+      async function init() {
+        loadTokenizer(modelSelect.value)
       }
 
       init()
