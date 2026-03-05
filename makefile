@@ -8,7 +8,8 @@ serve:
 	python3 -m http.server 8000
 
 test:
-	python3 -m pytest -q
+	uv run --with pytest-playwright==0.7.2 python -m playwright install chromium
+	uv run --with pytest-playwright==0.7.2 python -m pytest --browser chromium
 
 lint:
 	echo "no linter configured"
