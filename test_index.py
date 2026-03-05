@@ -34,8 +34,8 @@ def test_token_count_value(root):
     expect(root.locator("#status")).to_have_text(re.compile("Tokenizer loaded"), timeout=60000)
     
     textarea = root.locator("#input")
-    # "Hello" is usually 1 token
+    # "Hello" is 2 tokens in Gemma 3 (usually BOS + "Hello")
     textarea.fill("Hello")
     
     # Wait for debounce and check
-    expect(root.locator("#tokens")).to_have_text("1", timeout=10000)
+    expect(root.locator("#tokens")).to_have_text("2", timeout=10000)
